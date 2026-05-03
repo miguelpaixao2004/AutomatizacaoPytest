@@ -30,4 +30,4 @@ jobs:
           sleep 3
 
       - name: Rodar testes
-        run: pytest tests/ -v --tb=short
+        run: PYTHONPATH=. pytest tests/ -v --tb=short
