@@ -26,10 +26,10 @@ jobs:
 
       - name: Iniciar a API em background
         run: |
-          uvicorn main:app & https://stunning-pancake-5gqq54w64gwr36q9-8000.app.github.dev/
+          uvicorn main:app &
           sleep 3
 
       - name: Verificar que a API responde
         run: |
-          curl --fail https://stunning-pancake-5gqq54w64gwr36q9-8000.app.github.dev/___    # (!) ajuste para sua rota
+          curl --fail http://127.0.0.1:8000/
           echo "API respondeu com sucesso"
