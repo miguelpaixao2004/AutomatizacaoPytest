@@ -26,7 +26,7 @@ jobs:
 
       - name: Iniciar a API em background
         run: |
-          uvicorn ___:app & https://stunning-pancake-5gqq54w64gwr36q9-8000.app.github.dev/
+          uvicorn main:app & https://stunning-pancake-5gqq54w64gwr36q9-8000.app.github.dev/
           sleep 3
 
       - name: Verificar que a API responde
