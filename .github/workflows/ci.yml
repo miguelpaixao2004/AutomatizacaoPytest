@@ -26,10 +26,8 @@ jobs:
 
       - name: Iniciar a API em background
         run: |
-          uvicorn main:app &
+          uvicorn main:app &    
           sleep 3
 
-      - name: Verificar que a API responde
-        run: |
-          curl --fail http://127.0.0.1:8000/
-          echo "API respondeu com sucesso"
+      - name: Rodar testes
+        run: pytest tests/ -v --tb=short
