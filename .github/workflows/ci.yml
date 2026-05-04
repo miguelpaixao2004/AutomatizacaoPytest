@@ -1,33 +1,31 @@
-name: CI — Bella Tavola
+name: CI Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  verificar-api:
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Baixar o código
-        uses: actions/checkout@v4
-
-      - name: Configurar Python
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.12'
 
-      - name: Instalar dependências
+      - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          pip install fastapi uvicorn pytest httpx pydantic
 
-      - name: Iniciar a API em background
-        run: |
-          uvicorn main:app &    
-          sleep 3
+      - name: Run Smoke Tests (Only on PR)
+        if: github.event_name == 'pull_request'
+        run: PYTHONPATH=. pytest -v -m smoke
 
-      - name: Rodar testes
-        run: PYTHONPATH=. pytest tests/ -v --tb=short
+      - name: Run All Tests (Only on Push to Main)
+        if: github.event_name == 'push'
+        run: PYTHONPATH=. pytest -v
