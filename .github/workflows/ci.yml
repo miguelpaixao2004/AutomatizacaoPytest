@@ -22,6 +22,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install fastapi uvicorn pytest httpx pydantic
 
+      - name: Verificar autenticação com Hugging Face
+        run: python -c "import os; assert os.environ.get('HF_TOKEN'), 'HF_TOKEN não configurado'"
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
       - name: Run Smoke Tests (Only on PR)
         if: github.event_name == 'pull_request'
         run: PYTHONPATH=. pytest -v -m smoke
