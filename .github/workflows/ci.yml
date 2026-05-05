@@ -1,5 +1,6 @@
-name: CI Pipeline
+name: CI/CD Bella Tavola - Completo
 
+# O workflow é disparado em todo push para a main ou em Pull Requests
 on:
   push:
     branches: [ main ]
@@ -7,60 +8,105 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  # ==========================================
+  # JOB 1: QUALIDADE (Roda sempre, de forma rápida)
+  # ==========================================
+  qualidade:
+    name: Qualidade e Smoke Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup do Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
+          cache: 'pip' # Acelera a instalação guardando o pip em cache
 
-      - name: Install dependencies
+      - name: Instalar dependências
         run: |
           python -m pip install --upgrade pip
-          pip install fastapi uvicorn pytest httpx pydantic
           pip install -r requirements.txt
 
-      - name: Diagnóstico do ambiente (Observabilidade)
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }} # Trazemos o token em segredo só para checar se existe
+      - name: Diagnóstico do ambiente
         run: |
           echo "=== Versão do Python ==="
           python --version
-          
           echo -e "\n=== Dependências instaladas ==="
           pip list
-          
-          echo -e "\n=== Arquivos centrais do Bella Tavola ==="
-          # Verificamos se os arquivos que criamos hoje realmente existem na máquina virtual
-          ls -l main.py model_utils.py requirements.txt tests/test_modelo.py || echo "Aviso: Arquivo ausente!"
-          
-          echo -e "\n=== Status de Autenticação (Hugging Face) ==="
-          # Checa se a variável está vazia (-z) ou preenchida, SEM imprimir o valor (segurança!)
-          if [ -z "$HF_TOKEN" ]; then
-            echo "⚠️ ALERTA: HF_TOKEN não está configurado nos Secrets do repositório!"
-          else
-            echo "✅ HF_TOKEN está configurado e pronto para uso!"
-          fi
 
-      - name: Verificar autenticação com Hugging Face
-        run: python -c "import os; assert os.environ.get('HF_TOKEN'), 'HF_TOKEN não configurado'"
+      - name: Verificar formatação (Black)
+        run: black --check .
+
+      - name: Verificar imports inúteis (Autoflake)
+        # O -r significa recursivo (todas as pastas)
+        run: autoflake --check -r .
+
+      - name: Rodar testes rápidos (Smoke)
+        run: pytest tests/ -m smoke -v
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          PYTHONPATH: .
+
+  # ==========================================
+  # JOB 2: INTEGRAÇÃO (Testes pesados de ML)
+  # ==========================================
+  integracao:
+    name: Testes de Integração de Modelo
+    runs-on: ubuntu-latest
+    needs: qualidade # SÓ RODA SE A QUALIDADE PASSAR
+    # SÓ RODA SE FOR PUSH DIRETO NA MAIN (Evita gastar cota atoa em PRs em andamento)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup do Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Cache do modelo Hugging Face
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
-          # A chave combina a versão do modelo (manual) com o hash das dependências.
           key: hf-model-v1-${{ hashFiles('requirements.txt') }}
 
-      - name: Run Smoke Tests (Only on PR)
-        if: github.event_name == 'pull_request'
-        run: PYTHONPATH=. pytest -v -m smoke
+      - name: Diagnóstico de Segurança e Token
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          echo "=== Status de Autenticação (Hugging Face) ==="
+          if [ -z "$HF_TOKEN" ]; then
+            echo "⚠️ ALERTA: HF_TOKEN não configurado nos Secrets!"
+            exit 1 # Falha o pipeline de propósito se não achar a senha
+          else
+            echo "✅ HF_TOKEN carregado em memória com sucesso!"
+          fi
 
-      - name: Run All Tests (Only on Push to Main)
-        if: github.event_name == 'push'
-        run: PYTHONPATH=. pytest -v
+      - name: Rodar testes de integração
+        run: pytest tests/ -m integracao -v
+        env:
+          PYTHONPATH: .
+          HF_TOKEN: ${{ secrets.HF_TOKEN }} # Passando a senha segura para o Pytest
+
+  # ==========================================
+  # JOB 3: RELATÓRIO / AVISOS (Pós-sucesso)
+  # ==========================================
+  relatorio:
+    name: Relatório e Deploy
+    runs-on: ubuntu-latest
+    needs: integracao # SÓ RODA SE O MODELO PASSOU NOS TESTES
+    steps:
+      - name: Resumo do Pipeline
+        run: |
+          echo "🎉 O pipeline de MLOps do Bella Tavola rodou com 100% de sucesso!"
+          echo "👉 Commit: ${{ github.sha }}"
+          echo "👤 Autor: ${{ github.actor }}"
+          echo "🚀 Simulação: Se isso fosse o mundo real, o deploy aconteceria agora."
