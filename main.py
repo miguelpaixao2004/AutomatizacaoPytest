@@ -123,10 +123,18 @@ class PredictInput(BaseModel):
 
 @app.post("/ml/predict")
 def predict(payload: PredictInput):
-    # Retorna o formato exato que os testes de contrato exigem
-    return {
-        "prediction": 1,
-        "probability": 0.85,
-        "label": "risco_alto",
-        "model_version": "v1"
-    }
+    # Mock inteligente: se o pedido for muito caro ou tarde da noite, o risco sobe!
+    if payload.valor_pedido > 150.0 or payload.hora_pedido < 6:
+        return {
+            "prediction": 1,
+            "probability": 0.92,
+            "label": "risco_alto",
+            "model_version": "v1-mock"
+        }
+    else:
+        return {
+            "prediction": 0,
+            "probability": 0.12,
+            "label": "risco_baixo",
+            "model_version": "v1-mock"
+        }

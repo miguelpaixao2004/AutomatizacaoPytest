@@ -102,3 +102,34 @@ def test_predict_campo_invalido_retorna_422(client, campo, valor_invalido):
     payload = {**PAYLOAD_VALIDO, campo: valor_invalido}
     response = client.post("/ml/predict", json=payload)
     assert response.status_code == 422
+
+@pytest.mark.integracao
+def test_modelo_distingue_casos_extremos(client):
+    """
+    Verifica se o modelo (ou nosso mock) sabe diferenciar 
+    um pedido tranquilo de um pedido muito suspeito.
+    """
+    caso_tipico = {
+        "valor_pedido": 45.0,
+        "hora_pedido": 13,
+        "num_itens": 2,
+        "historico_cancelamentos": 0,
+        "distancia_entrega": 1.5
+    }
+
+    caso_suspeito = {
+        "valor_pedido": 500.0,
+        "hora_pedido": 2,
+        "num_itens": 10,
+        "historico_cancelamentos": 3,
+        "distancia_entrega": 25.0
+    }
+
+    resp_tipico = client.post("/ml/predict", json=caso_tipico)
+    resp_suspeito = client.post("/ml/predict", json=caso_suspeito)
+
+    prob_tipico = resp_tipico.json()["probability"]
+    prob_suspeito = resp_suspeito.json()["probability"]
+
+    # O risco do caso suspeito DEVE ser maior que o do caso típico
+    assert prob_suspeito > prob_tipico

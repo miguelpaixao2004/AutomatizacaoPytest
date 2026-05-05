@@ -23,6 +23,28 @@ jobs:
           pip install fastapi uvicorn pytest httpx pydantic
           pip install -r requirements.txt
 
+      - name: Diagnóstico do ambiente (Observabilidade)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }} # Trazemos o token em segredo só para checar se existe
+        run: |
+          echo "=== Versão do Python ==="
+          python --version
+          
+          echo -e "\n=== Dependências instaladas ==="
+          pip list
+          
+          echo -e "\n=== Arquivos centrais do Bella Tavola ==="
+          # Verificamos se os arquivos que criamos hoje realmente existem na máquina virtual
+          ls -l main.py model_utils.py requirements.txt tests/test_modelo.py || echo "Aviso: Arquivo ausente!"
+          
+          echo -e "\n=== Status de Autenticação (Hugging Face) ==="
+          # Checa se a variável está vazia (-z) ou preenchida, SEM imprimir o valor (segurança!)
+          if [ -z "$HF_TOKEN" ]; then
+            echo "⚠️ ALERTA: HF_TOKEN não está configurado nos Secrets do repositório!"
+          else
+            echo "✅ HF_TOKEN está configurado e pronto para uso!"
+          fi
+
       - name: Verificar autenticação com Hugging Face
         run: python -c "import os; assert os.environ.get('HF_TOKEN'), 'HF_TOKEN não configurado'"
         env:
