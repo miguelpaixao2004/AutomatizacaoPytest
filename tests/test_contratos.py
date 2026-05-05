@@ -1,5 +1,3 @@
-
-
 # 1. Schema de resposta de GET /pratos/{id}
 def test_contrato_get_prato_id(client):
     response = client.get("/pratos/1")
