@@ -27,6 +27,13 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
+      - name: Cache do modelo Hugging Face
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          # A chave combina a versão do modelo (manual) com o hash das dependências.
+          key: hf-model-v1-${{ hashFiles('requirements.txt') }}
+
       - name: Run Smoke Tests (Only on PR)
         if: github.event_name == 'pull_request'
         run: PYTHONPATH=. pytest -v -m smoke
